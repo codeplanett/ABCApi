@@ -40,14 +40,14 @@ def _load_from_module_spec(spec: importlib.machinery.ModuleSpec, key: str) -> No
         return lib
 
 
-def load_version(name: str) -> None:
+def load_names(name: str) -> None:
     spec = importlib.util.find_spec(name)
     if spec is None:
         raise Exception(f"Module not found: {name}")
     return _load_from_module_spec(spec, name)
 
 
-def extract_versions():
+def extract_names():
     names = glob.glob('./routes/*')
     rove = dict()
     returns = []
@@ -56,7 +56,7 @@ def extract_versions():
         if nn.endswith(".py") or nn.endswith("__pycache__"):
             pass
         else:
-            route = load_version(f"routes.{ver}.{ver}")
+            route = load_names(f"routes.{ver}.{ver}")
             rove[ver] = route
     for i in rove:
         routes = getattr(rove[i], "extract_this_version_routes")()
@@ -65,5 +65,5 @@ def extract_versions():
 
 
 router = Router(
-    extract_versions()
+    extract_names()
 )
