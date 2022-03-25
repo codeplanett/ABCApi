@@ -7,25 +7,26 @@ from starlette.applications import Starlette
 
 from config import REDIS_URL
 from middleware import register_middleware
-from routes import router, get_root
+from routes import router
 
 
-app = Starlette()
+log = logging.getLogger("root")
+app = Starlette(debug=True)
 
 app.redis = None
 
 app.session = None
 
 app.mount('/', router)
-app.route("/", get_root)
 register_middleware(app)
 
 
 @app.on_event('startup')
 async def on_startup():
     app.redis = aioredis.Redis.from_url(url=str(REDIS_URL), decode_responses=True)
+    log.info("Redis has been connected")
 
-    app.session = aiohttp.ClientSession(headers={'User-Agent': f'ABC/1.5.1'})
+    app.session = aiohttp.ClientSession(headers={'User-Agent': f'ABC/1.7.1'})
 
 
 @app.on_event('shutdown')

@@ -1,8 +1,11 @@
+import json
+
 import jwt
-import starlette.requests
 from starlette.authentication import AuthCredentials, AuthenticationBackend, AuthenticationError, BaseUser
 from starlette.middleware.authentication import AuthenticationMiddleware
+from utils import decrypt_json
 
+from . import fernet
 from .cors import add_header
 from .errors import on_http_error
 
@@ -44,15 +47,16 @@ class KatanaAuthError(AuthenticationError):
 
 
 class KatanaAuthBackend(AuthenticationBackend):
-    async def authenticate(self, request: starlette.requests.Request):
+    async def authenticate(self, request: fernet.FernetRequest):
         if str(request.url).endswith("/register"):
             return None
         try:
-            auth: str = request.headers["Authorization"]
-            datas = auth.split(" ")
-            username = datas[0]
-            email = datas[1]
-            password = datas[2]
+            key = request.headers["Authorization"].encode("utf-8")
+            auth = decrypt_json(key)
+            auth = json.loads(auth)
+            username = auth["username"]
+            email = auth["email"]
+            password = auth["password"]
         except KeyError:
             return
         jdata = jwt.encode(payload={"username": username, "email": email}, key=password)

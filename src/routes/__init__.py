@@ -1,17 +1,12 @@
-import asyncio
+import glob
 import glob
 import importlib
-import logging
 import sys
 
-from starlette.responses import PlainTextResponse
-from starlette.routing import Mount, Route, Router
+from starlette.responses import JSONResponse
+from starlette.routing import Mount, Router
 
-from src.routes.v1 import process, account
-
-
-def get_root(request):
-    return PlainTextResponse('ABC hmmm.')
+from routes import root
 
 
 def extract_routes(*modules):
@@ -61,6 +56,7 @@ def extract_names():
     for i in rove:
         routes = getattr(rove[i], "extract_this_version_routes")()
         returns.append(Mount(f"/{i}", routes=routes))
+    returns.append(Mount("/", routes=root.router.routes))
     return returns
 
 

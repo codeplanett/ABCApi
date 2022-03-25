@@ -1,3 +1,4 @@
+import json
 import re
 
 import jwt
@@ -6,25 +7,26 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 from starlette.routing import Router
 
-from src import is_authorized
+from auth import is_authorized
+from middleware import fernet
+from utils import decrypt_json
 
 router = Router()
 
 
 @router.route('/login', methods=['POST'])
 @is_authorized
-async def katanaLogin(request: starlette.requests.Request):
+async def katanaLogin(request: fernet.FernetRequest):
     return JSONResponse({"status": "Authorized"})
 
 
 @router.route('/register', methods=['POST'])
-async def katanaRegister(request: starlette.requests.Request):
+async def katanaRegister(request: fernet.FernetRequest):
     try:
-        auth: str = request.headers["Authorization"]
-        datas = auth.split(" ")
-        username = datas[0]
-        email = datas[1]
-        password = datas[2]
+        auth = request.token
+        username = auth["username"]
+        email = auth["email"]
+        password = auth["password"]
     except KeyError:
         return
     try:
