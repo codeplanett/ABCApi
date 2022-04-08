@@ -1,11 +1,10 @@
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Router
-
-from middleware.fernet import FernetRequest
 
 router = Router()
 
 
 @router.route("/")
-async def get_root(request: FernetRequest):
+async def get_root(request: Request):
     return JSONResponse({"sign": 'ABC hmmm.'}, 418)

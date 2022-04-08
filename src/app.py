@@ -1,5 +1,5 @@
-import json
 import logging
+import sys
 
 import aiohttp
 import aioredis
@@ -10,7 +10,7 @@ from middleware import register_middleware
 from routes import router
 
 
-log = logging.getLogger("root")
+log = logging.getLogger("uvicorn")
 app = Starlette(debug=True)
 
 app.redis = None
@@ -24,7 +24,12 @@ register_middleware(app)
 @app.on_event('startup')
 async def on_startup():
     app.redis = aioredis.Redis.from_url(url=str(REDIS_URL), decode_responses=True)
-    log.info("Redis has been connected")
+    try:
+        await app.redis.ping()
+    except Exception as e:
+        log.exception("Redis has not connected")
+    else:
+        log.info("Redis has been connected.")
 
     app.session = aiohttp.ClientSession(headers={'User-Agent': f'ABC/1.7.1'})
 

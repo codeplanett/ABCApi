@@ -1,6 +1,7 @@
 import json
 
 import cryptography.fernet
+import cryptography.utils
 
 from config import FERNET_KEY
 
@@ -13,4 +14,7 @@ def encrypt_json(data):
 
 
 def decrypt_json(data):
-    return json.loads(_FERNET.decrypt(data).decode('utf-8'))
+    try:
+        return json.loads(json.loads(_FERNET.decrypt(data).decode('utf-8')))
+    except TypeError:
+        return json.loads(_FERNET.decrypt(data).decode('utf-8'))

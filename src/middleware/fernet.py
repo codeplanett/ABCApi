@@ -1,32 +1,41 @@
 import json
+import logging
+import threading
+from json import JSONDecodeError
 
+import anyio
 import cryptography.fernet
+import typing
 from starlette.authentication import AuthenticationError
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint, DispatchFunction
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.types import ASGIApp, Scope, Receive, Send
 from utils import decrypt_json
+
 
 from middleware.blacklist import Blacklist
 
 
-class FernetRequest(Request):
-    token = None
-
-
 class FernetMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        request = FernetRequest(receive=request.receive, scope=request.scope)
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+        blacklist = Blacklist("./blacklist.yml")
+        await blacklist.load()
         try:
             try:
                 key = request.headers["Authorization"].encode("utf-8")
                 auth = decrypt_json(key)
-                request.token = json.loads(auth)
+                request.scope["token"] = auth
             except KeyError as e:
                 pass
+            try:
+                data = await request.json()
+                data = data["fernetted"].encode()
+                json = decrypt_json(data)
+                request.scope["json"] = json
+            except JSONDecodeError as e:
+                pass
         except cryptography.fernet.InvalidToken as e:
-            blacklist = Blacklist("./blacklist.yml")
-            await blacklist.load()
             for header in request.headers.raw:
                 if header[0] == b'host':
                     await blacklist.put(header[1].decode("utf-8"), True)

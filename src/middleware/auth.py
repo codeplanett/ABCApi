@@ -1,8 +1,10 @@
 import json
+from abc import ABC, abstractmethod
 
 import jwt
 from starlette.authentication import AuthCredentials, AuthenticationBackend, AuthenticationError, BaseUser
 from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.requests import HTTPConnection
 from utils import decrypt_json
 
 from . import fernet
@@ -12,14 +14,15 @@ from .errors import on_http_error
 add_header('Authorization')
 
 
-class User(BaseUser):
+class User(BaseUser, ABC):
     def __init__(self, data):
         self.username = data['username']
-        self.email = data['email']
+        self.mail = data['email']
+        self.token = data["token"]
 
     @property
     def identity(self):
-        raise NotImplementedError
+        return f"{self.token}"
 
     @property
     def is_authenticated(self):
@@ -30,7 +33,7 @@ class User(BaseUser):
         return f'{self.username}'
 
     @property
-    def mail(self):
+    def email(self):
         return f'{self.email}'
 
 
@@ -47,13 +50,12 @@ class KatanaAuthError(AuthenticationError):
 
 
 class KatanaAuthBackend(AuthenticationBackend):
-    async def authenticate(self, request: fernet.FernetRequest):
+    async def authenticate(self, request: HTTPConnection):
         if str(request.url).endswith("/register"):
             return None
         try:
             key = request.headers["Authorization"].encode("utf-8")
             auth = decrypt_json(key)
-            auth = json.loads(auth)
             username = auth["username"]
             email = auth["email"]
             password = auth["password"]
@@ -66,7 +68,7 @@ class KatanaAuthBackend(AuthenticationBackend):
             raise KatanaAuthError(402, 'The data is incorrect')
         else:
             if dr == jdata:
-                return Credentials(jdata), User({"username": username, "email": email})
+                return Credentials(jdata), User({"username": username, "email": email, "token": jdata})
             else:
                 raise KatanaAuthError(402, "The data is incorrect")
 

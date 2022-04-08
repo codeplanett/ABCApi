@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import uuid
 
@@ -8,12 +9,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from . import fernet
+from utils import decrypt_json
+
 
 class Blacklist:
     def __init__(self, name="./blacklist.yml", **options):
         self.name = name
-        self.object_hook = options.pop('object_hook', None)
-        self.encoder = options.pop('encoder', None)
 
         try:
             hook = options.pop('hook')
@@ -31,19 +33,25 @@ class Blacklist:
 
     def load_from_file(self):
         try:
+            self._db = dict()
             with open(self.name, 'r') as f:
-                self._db = yaml.load(f, Loader=yaml.SafeLoader)
+                data = yaml.load(f, Loader=yaml.SafeLoader)
+                try:
+                    for i in data:
+                        self._db[i] = data[i]
+                except TypeError:
+                    self._db = dict()
         except FileNotFoundError:
-            self._db = {}
+            self._db = dict()
 
     async def load(self):
         async with self.lock:
             await self.loop.run_in_executor(None, self.load_from_file)
 
     def _dump(self):
-        temp = '%s-%s.tmp' % (uuid.uuid4(), self.name)
+        temp = self.name
         with open(temp, 'w', encoding='utf-8') as tmp:
-            yaml.dump(self._db.copy(), tmp, ensure_ascii=True, cls=self.encoder, separators=(',', ':'))
+            yaml.dump(self._db.copy(), tmp)
         os.replace(temp, self.name)
 
     async def save(self):

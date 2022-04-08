@@ -6,24 +6,23 @@ import starlette.requests
 from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 from starlette.routing import Router
+from starlette.requests import Request
 
 from auth import is_authorized
-from middleware import fernet
-from utils import decrypt_json
 
 router = Router()
 
 
 @router.route('/login', methods=['POST'])
 @is_authorized
-async def katanaLogin(request: fernet.FernetRequest):
+async def katanaLogin(request: Request):
     return JSONResponse({"status": "Authorized"})
 
 
 @router.route('/register', methods=['POST'])
-async def katanaRegister(request: fernet.FernetRequest):
+async def katanaRegister(request: Request):
     try:
-        auth = request.token
+        auth = request.scope["token"]
         username = auth["username"]
         email = auth["email"]
         password = auth["password"]
@@ -39,7 +38,7 @@ async def katanaRegister(request: fernet.FernetRequest):
     except Exception as e:
         raise HTTPException(500, f'There is an error in the database Error: {e}')
     if result == 0:
-        return JSONResponse({'messages': "Such an account already exists"})
+        return JSONResponse({'messages': "Such an account already exists"}, 400)
     if result > 0:
         return JSONResponse({'messages': "Account has been created"})
     else:
