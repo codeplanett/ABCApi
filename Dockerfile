@@ -4,4 +4,7 @@ LABEL maintainer="Kerem Ege Şahin <valvevaluejedi@gmail.com>"
 
 COPY . .
 
+ENV CFLAGS=-Qunused-arguments
+ENV CPPFLAGS=-Qunused-arguments
+
 RUN pip install -r requirements.txt
